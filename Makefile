@@ -113,7 +113,7 @@ report:
 	@bash $(REPO)/scripts/build_report.sh
 
 slides:
-	@$(PY) $(REPO)/slides/build_demo.py
+	@$(PY) $(REPO)/slides/build_fused_attention_demo.py
 
 clean:
 	rm -rf $(REPO)/tmp/cupy $(REPO)/tmp/cuda_tile $(REPO)/tmp/*.cubin $(REPO)/tmp/*.sass

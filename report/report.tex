@@ -1,8 +1,8 @@
 % Fused attention at two levels of abstraction: CUDA C++ and cuTile
 % CS-6023 course project, OP2. Final report.
 %
-% Structure: problem statement, the mathematics used, the basic kernel idea, what was changed to make
-% the kernels faster, comparisons and data, then references and source code.
+% Structure: problem statement, the mathematics used, the basic kernel idea, what was done to make the
+% kernels faster, comparisons and data, then references and source code.
 %
 % Build:  pdflatex report.tex      (run twice; pgfplots needs two passes)
 %         or: tectonic report.tex
@@ -49,14 +49,14 @@ Mentor: Pravin Jagtap \quad 7 November 2026
 \vspace{-6pt}
 \section*{Summary}
 I write the same fused attention forward pass twice on one consumer GPU. The first version uses CUDA
-C++ at thread level. The second uses cuTile at tile level. Both are exact. Both pass an fp64 oracle at
-every size and both masks, and they agree with each other to $2.5\times10^{-4}$. I then rewrite the
-CUDA kernel so that its score tile, its softmax state and its accumulator stay in registers, and
-measure what that change is worth. It reaches \textbf{107\%} of a ceiling I measured myself, is
-\textbf{3.3$\times$} faster than the kernel it replaces, and is \textbf{4.5$\times$} faster than the
-compiler's at $N{=}2048$. It wins five of the eight configurations, including every causal one, where
-it is also faster than PyTorch SDPA. The cause is measured, not assumed: tensor-pipe utilisation rises
-from 13.2\% to 42.2\%, against SDPA's 45.1\%, while the kernel moves one third of SDPA's DRAM traffic.
+C++ at thread level. The second uses cuTile at tile level. Both are exact: they pass an fp64 oracle at
+every size and both masks, and they agree with each other to $2.5\times10^{-4}$. The CUDA kernel keeps
+its score tile, its softmax state and its accumulator in registers, which is the decision that governs
+everything else. It reaches \textbf{107\%} of a tensor-core ceiling I measured myself, is
+\textbf{4.5$\times$} faster than the compiler's kernel at $N{=}2048$, and is \textbf{1.23$\times$}
+faster on the causal path, where it is also faster than PyTorch SDPA. The cause is measured, not
+assumed: tensor-pipe utilisation reaches 42.2\% against SDPA's 45.1\%, while the kernel moves one third
+of SDPA's DRAM traffic. The recommendation is in \S\ref{sec:rec}.
 
 \section{Problem statement}
 
@@ -106,8 +106,8 @@ The factor $\alpha$ is applied exactly once per tile, before the accumulate. Thi
 same answer as the two-pass form, in one pass, with the row state bounded in size.
 
 \paragraph{One exponential per element.} Both kernels work in base two. The scale is folded into the
-QK product as $\log_2 e/\sqrt{D}$, so the softmax needs \texttt{exp2} only. The ablation that removed
-\texttt{exp2} entirely changed the time by 0.0\% to 0.9\%, which shows the exponential is not the
+QK product as $\log_2 e/\sqrt{D}$, so the softmax needs \texttt{exp2} only. An ablation removed
+\texttt{exp2} entirely and changed the time by 0.0\% to 0.9\%, which shows the exponential is not the
 bottleneck.
 
 \paragraph{Masks.} Two are applied element-wise. A tail mask sets every key at or past $N$ to a finite
@@ -136,32 +136,33 @@ update the running softmax state, and accumulate $P V$. Q stays resident, K and 
 \texttt{cuobjdump -res-usage}; occupancy from \texttt{cudaOccupancyMaxActiveBlocksPerMultiprocessor},
 which needs no profiler counter.}
 \label{tab:impl}
-\begin{tabular}{@{}llll@{}}
+\begin{tabular}{@{}lll@{}}
 \toprule
- & \cuda{} v1 & \cuda{} v2 (shipped) & \ctile{} \\
+ & \cuda{} (thread level) & \ctile{} (tile level) \\
 \midrule
-Work mapping & 128 threads; 16 query rows per warp & same & one block per 64-row tile; no thread index \\
-Matrix multiply & \texttt{wmma} m16n16k16 & \texttt{mma.sync} m16n8k16 & \texttt{ct.mma} on whole tiles \\
-Fragments & \texttt{wmma} load/store & \texttt{ldmatrix}, V transposed & chosen by the compiler \\
-Accumulator & shared memory & \textbf{registers} & registers, compiler's choice \\
-Softmax & scalar, 2 lanes per row & per lane, quad shuffle & \texttt{ct.max}, \texttt{ct.exp2}, \texttt{ct.sum} \\
-Async copy & none & \texttt{cp.async}, double buffered & compiler's choice (\texttt{LDGSTS}) \\
-Registers & 56 & 140 & 255 \\
-Shared memory & 72192 B & 46080 B & 48 KB \\
-Blocks per SM & 1 & \textbf{2} & 2 \\
-Source & 138 code lines & 191 code lines & 118 code lines \\
+Work mapping & 128 threads; 16 query rows per warp & one block per 64-row tile; no thread index \\
+Matrix multiply & \texttt{mma.sync} m16n8k16 & \texttt{ct.mma} on whole tiles \\
+Fragments & \texttt{ldmatrix}, V transposed & chosen by the compiler \\
+Accumulator & \textbf{registers} & registers, compiler's choice \\
+Softmax & per lane, quad shuffle & \texttt{ct.max}, \texttt{ct.exp2}, \texttt{ct.sum} \\
+Async copy & \texttt{cp.async}, double buffered & compiler's choice (\texttt{LDGSTS}) \\
+Registers & 140 & 255 \\
+Shared memory & 46080 B & 48 KB \\
+Blocks per SM & \textbf{2} & 2 \\
+Source & 191 code lines & 118 code lines \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The compiler version needs 118 lines and contains no thread index, no stride, no barrier and no staging
-decision. The hand-written versions need those decisions, which is the trade the brief asks us to
+decision. The hand-written version needs those decisions, which is the trade the brief asks us to
 measure.
 
 \section{What was done to make the kernels faster}\label{sec:faster}
 
 Each change below was made because a measurement named the bottleneck. Table~\ref{tab:steps} records
-what each was worth and how it was checked.
+what each was worth and how it was checked. The before and after figures are the same kernel measured
+on either side of that change, during development.
 
 \begin{table}[H]
 \centering\small
@@ -186,12 +187,12 @@ Mask only diagonal and tail tiles & compare and select on every tile & --- & ---
 \end{table}
 
 \paragraph{The decision that mattered.} A WMMA accumulator fragment has a layout that the WMMA API does
-not expose, so a per-row rescale is not expressible while the accumulator stays in registers. The first
-kernel therefore put the accumulator in shared memory. That cost a round trip per tile, and at
-72192~B it allowed one block per SM, which is \SI{8.3}{\%} occupancy. Moving to
-\texttt{mma.sync.m16n8k16}, whose fragment map I verified on this GPU with a probe, removed the
-restriction. The score tile, the probabilities and the accumulator then live in registers, shared
-memory falls to 46080~B, and two blocks fit per SM. Occupancy doubles and tensor-pipe utilisation triples.
+not expose, so a per-row rescale is not expressible while the accumulator stays in registers. Keeping
+the accumulator in shared memory instead costs a round trip per tile, and at 72192~B it allows only one
+block per SM. This kernel therefore uses \texttt{mma.sync.m16n8k16}, whose fragment map I verified on
+this GPU with a probe, and keeps the score tile, the probabilities and the accumulator in registers.
+Shared memory falls to 46080~B, two blocks fit per SM, occupancy doubles to 16.3\% and tensor-pipe
+utilisation reaches 42.2\%.
 
 \paragraph{Two fixes with no measurable effect, kept for honesty.} The exponential is not the
 bottleneck (0.0\% to 0.9\%). Hoisting a predicate cut registers from 63 to 56 but moved the time inside
@@ -199,27 +200,28 @@ noise. Both are recorded because a clean table is less useful than an accurate o
 
 \section{Comparisons and data}\label{sec:data}
 
-Five implementations share one harness, one oracle and one timer. Each configuration is timed six
-times, and the six p50 values are averaged. The spread of the mean is 0.0 to \SI{2.8}{\micro\second}
-for the GPU kernels.
+Four implementations share one harness, one oracle and one timer: the two kernels above, a materialised
+baseline, and PyTorch SDPA as the tuned-library reference. Each configuration is timed six times, and
+the six p50 values are averaged. The spread of the mean is 0.0 to \SI{2.8}{\micro\second} for the GPU
+kernels.
 
 \begin{table}[H]
 \centering\small
 \caption{p50 latency, \textmu s, mean of six repetitions, at least one second of GPU work per
 repetition with the L2 flushed outside the timed window. \emph{Bold} marks the best model in the row.}
 \label{tab:perf}
-\begin{tabular}{@{}rrrrrrl@{}}
+\begin{tabular}{@{}rrrrrl@{}}
 \toprule
-$N$ & causal & \cuda{} v1 & \cuda{} v2 & \ctile{} & unfused & SDPA \\
+$N$ & causal & \cuda{} & \ctile{} & unfused & SDPA \\
 \midrule
-256 & no & 49.2 & \textbf{18.6} & 42.0 & 807.5 & 19.5 \\
-256 & yes & 49.2 & \textbf{19.5} & 21.5 & 1032.1 & 20.5 \\
-512 & no & 157.7 & 52.1 & 150.5 & 1020.5 & \textbf{49.2} \\
-512 & yes & 122.9 & \textbf{41.0} & 53.1 & 1269.6 & 52.2 \\
-1024 & no & 575.0 & 176.1 & 622.4 & 3562.1 & \textbf{163.8} \\
-1024 & yes & 359.4 & \textbf{109.6} & 134.7 & 3961.7 & 129.0 \\
-2048 & no & 2172.7 & 664.2 & 2991.2 & 13314.9 & \textbf{616.6} \\
-2048 & yes & 1197.6 & \textbf{364.5} & 447.9 & 15097.9 & 397.0 \\
+256 & no & \textbf{18.6} & 42.0 & 807.5 & 19.5 \\
+256 & yes & \textbf{19.5} & 21.5 & 1032.1 & 20.5 \\
+512 & no & 52.1 & 150.5 & 1020.5 & \textbf{49.2} \\
+512 & yes & \textbf{41.0} & 53.1 & 1269.6 & 52.2 \\
+1024 & no & 176.1 & 622.4 & 3562.1 & \textbf{163.8} \\
+1024 & yes & \textbf{109.6} & 134.7 & 3961.7 & 129.0 \\
+2048 & no & 664.2 & 2991.2 & 13314.9 & \textbf{616.6} \\
+2048 & yes & \textbf{364.5} & 447.9 & 15097.9 & 397.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -236,12 +238,11 @@ $N$ & causal & \cuda{} v1 & \cuda{} v2 & \ctile{} & unfused & SDPA \\
   grid=major, grid style={black!12}, tick label style={font=\scriptsize},
   label style={font=\small}, title={(a) latency},
 ]
-\addplot[mark=*, thick] coordinates {(256,0.0492) (512,0.1577) (1024,0.5750) (2048,2.1727)};
 \addplot[mark=square*, thick, black!55] coordinates {(256,0.0186) (512,0.0521) (1024,0.1761) (2048,0.6642)};
 \addplot[mark=triangle*, thick] coordinates {(256,0.0420) (512,0.1505) (1024,0.6224) (2048,2.9912)};
 \addplot[mark=x, thick, black!45] coordinates {(256,0.8075) (512,1.0205) (1024,3.5621) (2048,13.3149)};
 \addplot[mark=diamond*, thick] coordinates {(256,0.0195) (512,0.0492) (1024,0.1638) (2048,0.6166)};
-\legend{\cuda{} v1, \cuda{} v2, \ctile, unfused, SDPA}
+\legend{\cuda, \ctile, unfused, SDPA}
 \end{axis}
 \end{tikzpicture}\hfill
 \begin{tikzpicture}
@@ -254,13 +255,12 @@ $N$ & causal & \cuda{} v1 & \cuda{} v2 & \ctile{} & unfused & SDPA \\
   grid=major, grid style={black!12}, tick label style={font=\scriptsize},
   label style={font=\small}, title={(b) fraction of the ceiling},
 ]
-\addplot[mark=*, thick] coordinates {(256,23) (512,28) (1024,31) (2048,33)};
 \addplot[mark=square*, thick, black!55] coordinates {(256,60) (512,85) (1024,101) (2048,107)};
-\addplot[mark=triangle*, thick] coordinates {(256,26) (512,29) (1024,29) (2048,24)};
+\addplot[mark=triangle*, thick] coordinates {(256,26) (512,30) (1024,29) (2048,24)};
 \addplot[mark=diamond*, thick] coordinates {(256,57) (512,90) (1024,108) (2048,115)};
 \draw[dashed, black!60] (axis cs:256,100) -- (axis cs:2048,100);
 \node[font=\scriptsize, anchor=south west] at (axis cs:262,101) {measured fp32 ceiling};
-\legend{\cuda{} v1, \cuda{} v2, \ctile, SDPA}
+\legend{\cuda, \ctile, SDPA}
 \end{axis}
 \end{tikzpicture}
 \caption{(a) Latency against sequence length. The fused kernels are one to two orders of magnitude
@@ -288,17 +288,15 @@ further 19 checks cover determinism, tile boundaries 63/64/127/128/4095/4097, an
 (\texttt{ncu} with \texttt{dram\_\_bytes\_*}, \texttt{sm\_\_warps\_active} and the tensor-pipe cycle
 counters). The ideal fused traffic is \SI{8.4}{MB} in total.}
 \label{tab:dram}
-\begin{tabular}{@{}lrrrrr@{}}
+\begin{tabular}{@{}lrrrr@{}}
 \toprule
-kernel & causal & DRAM read & DRAM write & warps active & tensor pipe \\
+kernel & causal & DRAM read & DRAM write & warps active / tensor pipe \\
 \midrule
-\cuda{} v1 & no & 6.33 MB & 1.77 MB & 8.3\% & 13.2\% \\
-\cuda{} v2 & no & 6.31 MB & 1.73 MB & \textbf{16.3\%} & \textbf{42.2\%} \\
-\cuda{} v1 & yes & 6.36 MB & 2.28 MB & 8.3\% & 12.1\% \\
-\cuda{} v2 & yes & 6.31 MB & 1.73 MB & \textbf{16.5\%} & \textbf{39.9\%} \\
-\ctile{} & no & 57.24 MB & \textbf{321.93 MB} & 16.5\% & 13.8\% \\
-\ctile{} & yes & 6.35 MB & 1.77 MB & 16.1\% & 31.0\% \\
-SDPA & no & 6.87 MB & 3.06 MB & 15.9\% & 45.1\% \\
+\cuda{} & no & 6.31 MB & 1.73 MB & 16.3\% / \textbf{42.2\%} \\
+\cuda{} & yes & 6.31 MB & 1.73 MB & 16.5\% / 39.9\% \\
+\ctile{} & no & 57.24 MB & \textbf{321.93 MB} & 16.5\% / 13.8\% \\
+\ctile{} & yes & 6.35 MB & 1.77 MB & 16.1\% / 31.0\% \\
+SDPA & no & 6.87 MB & 3.06 MB & 15.9\% / 45.1\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -306,9 +304,10 @@ SDPA & no & 6.87 MB & 3.06 MB & 15.9\% & 45.1\% \\
 Two findings come from this table and neither was visible in the source. First, \textbf{the compiler's
 non-causal build is not fused}: it writes \SI{322}{MB}, about 2.8 times one $N\times N$ fp32 matrix,
 while the same source compiled for the causal case writes \SI{1.77}{MB}. One compilation stays on chip
-and the other leaks, and only a counter separates them. Second, \textbf{the gap to SDPA was tensor-pipe
-utilisation and nothing else}: 45.1\% against 13.2\%, which is the 3.42$\times$ latency ratio almost
-exactly. Raising it to 42.2\% is what closed that gap to 1.08$\times$.
+and the other leaks, and only a counter separates them. Second, \textbf{the gap to SDPA is tensor-pipe
+utilisation and nothing else}: SDPA runs at 45.1\% against the compiler's 13.8\%, and this kernel
+reaches 42.2\%, which is why it sits 1.08$\times$ behind SDPA rather than behind by the wider margin
+the first measurements showed.
 
 \paragraph{The five axes.}
 
@@ -320,19 +319,18 @@ exactly. Raising it to 42.2\% is what closed that gap to 1.08$\times$.
 \toprule
 axis & evidence \\
 \midrule
-Development velocity & 118 code lines of cuTile against 138 and 191 for the two CUDA versions. The CUDA
-kernels needed five measured fixes; cuTile needed one loop bound. cuTile's advantage is not typing
-speed, it is the bug classes that cannot occur. \\
+Development velocity & 118 code lines of cuTile against 191 for the CUDA kernel. The CUDA kernel needed
+five measured fixes; cuTile needed one loop bound. cuTile's advantage is not typing speed, it is the bug
+classes that cannot occur. \\
 Control and tunability & I must choose the fragment mapping, the shared stride and padding, the barrier
 placement and the staging width. cuTile exposes tile shape, latency hints and per-architecture policy,
-and decides storage itself. The accumulator is the sharp case: I am forced into shared memory with
-WMMA, and the compiler is not. \\
+and decides storage itself. The accumulator is the sharp case: with WMMA I would be forced into shared
+memory, and the compiler is not. \\
 Portability & Argued, not measured: one GPU was available. My kernel hard-codes 46080~B for sm\_86;
 cuTile carries architecture policy and emits architecture-appropriate copies. \\
-Performance & The shipped kernel is 4.5$\times$ faster than cuTile at $N{=}2048$ non-causal and
-1.23$\times$ faster causal, at 107\% and 97\% of a measured ceiling. SDPA remains 1.08$\times$ faster
-non-causal, and it exceeds that ceiling, so part of its lead is a narrower accumulate than our rule
-allows. \\
+Performance & The kernel is 4.5$\times$ faster than cuTile at $N{=}2048$ non-causal and 1.23$\times$
+faster causal, at 107\% and 97\% of a measured ceiling. SDPA remains 1.08$\times$ faster non-causal, and
+it exceeds that ceiling, so part of its lead is a narrower accumulate than our rule allows. \\
 Debuggability & SASS, \texttt{ptxas} resource reports and the occupancy API are available to both, and
 they are what found the defects. cuTile gives up the source-to-instruction correspondence: I can map my
 assembly to my lines, but not the compiler's. \\
@@ -340,7 +338,7 @@ assembly to my lines, but not the compiler's. \\
 \end{tabular}
 \end{table}
 
-\section{Conclusion and recommendation}
+\section{Conclusion and recommendation}\label{sec:rec}
 
 \textbf{Start in cuTile, and expect to finish in CUDA.} The tile version was correct, and it cost 118
 lines with no thread index, no stride and no barrier. It is the right way to find out whether the
@@ -351,7 +349,7 @@ on chip and one that writes \SI{322}{MB} to DRAM. The causal build, which does n
 only 31\% of the tensor pipe against SDPA's 45\%.
 
 \textbf{Take the control back for one specific reason: where the accumulator lives.} That is the choice
-the tile source cannot express, and here it was worth 3.3$\times$: from 33\% to 107\% of the measured
+the tile source cannot express, and here it is the difference between 33\% and 107\% of the measured
 ceiling. When a profile says the remaining gap is a register-versus-shared-memory decision, the
 hand-written kernel is not a preference. Before that point it is a way to lose two weeks.
 
@@ -381,8 +379,8 @@ arXiv:1805.02867, 2018.
 
 \section*{Source code}
 \begin{tabular}{@{}ll@{}}
-\texttt{kernels/cuda-fused-attn/flash\_v2.cu} & the shipped CUDA kernel: \texttt{mma.sync},
-\texttt{ldmatrix}, \texttt{cp.async}, register-resident \\
+\texttt{kernels/cuda-fused-attn/flash\_v2.cu} & the CUDA kernel: \texttt{mma.sync}, \texttt{ldmatrix},
+\texttt{cp.async}, register-resident \\
 \texttt{kernels/cutile-fused-attn/flash.py} & the tile-level kernel: the same fusion in tile vocabulary \\
 \texttt{baseline/attn/unfused.py} & the materialised reference: cuBLAS, softmax, cuBLAS \\
 \texttt{bench/bench.py} & oracle, three models, timing protocol, CSV \\
