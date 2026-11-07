@@ -286,14 +286,16 @@ further 19 checks cover determinism, tile boundaries 63/64/127/128/4095/4097, an
 \centering\small
 \caption{Measured DRAM traffic and utilisation at $N{=}2048$, one profiled launch per row
 (\texttt{ncu} with \texttt{dram\_\_bytes\_*}, \texttt{sm\_\_warps\_active} and the tensor-pipe cycle
-counters). The ideal fused traffic is \SI{8.4}{MB} in total.}
+counters). The ideal fused traffic is \SI{8.4}{MB} in total. One launch per row: the write count
+depends on how much of the output the L2 still holds, so it varies between captures, and these are the
+files in \texttt{profiles/}.}
 \label{tab:dram}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
 kernel & causal & DRAM read & DRAM write & warps active / tensor pipe \\
 \midrule
-\cuda{} & no & 6.31 MB & 1.73 MB & 16.3\% / \textbf{42.2\%} \\
-\cuda{} & yes & 6.31 MB & 1.73 MB & 16.5\% / 39.9\% \\
+\cuda{} & no & 6.31 MB & 2.40 MB & 16.3\% / \textbf{42.2\%} \\
+\cuda{} & yes & 6.31 MB & 1.77 MB & 16.4\% / 39.6\% \\
 \ctile{} & no & 57.24 MB & \textbf{321.93 MB} & 16.5\% / 13.8\% \\
 \ctile{} & yes & 6.35 MB & 1.77 MB & 16.1\% / 31.0\% \\
 SDPA & no & 6.87 MB & 3.06 MB & 15.9\% / 45.1\% \\

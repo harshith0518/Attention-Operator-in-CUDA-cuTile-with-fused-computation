@@ -1,9 +1,9 @@
-==PROF== Connected to process 715 (/usr/bin/python3.12)
+==PROF== Connected to process 767 (/usr/bin/python3.12)
 launched cuda N=2048 causal=0 out=(1, 8, 2048, 64)
-==PROF== Disconnected from process 715
+==PROF== Disconnected from process 767
 "ID","Process ID","Process Name","Host Name","Kernel Name","Context","Stream","Block Size","Grid Size","Device","CC","Section Name","Metric Name","Metric Unit","Metric Value"
-"0","715","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_read.sum","byte","6328192"
-"0","715","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_write.sum","byte","1772672"
-"0","715","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","gpu__time_duration.sum","ns","3209792"
-"0","715","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed","%","13.20"
-"0","715","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__warps_active.avg.pct_of_peak_sustained_active","%","8.33"
+"0","767","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_read.sum","byte","6308736"
+"0","767","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_write.sum","byte","2399744"
+"0","767","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","gpu__time_duration.sum","ns","1004448"
+"0","767","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed","%","42.18"
+"0","767","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__warps_active.avg.pct_of_peak_sustained_active","%","16.26"
