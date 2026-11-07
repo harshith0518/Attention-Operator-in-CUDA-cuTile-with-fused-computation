@@ -1,0 +1,55 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# CUDA C++ build output
+*.obj
+*.o
+*.exe
+*.exp
+*.lib
+*.pdb
+*.ilk
+
+# Profiler scratch. Curated reports in profiles/ ARE tracked (graded evidence).
+*.ncu-rep.tmp
+*.nsys-rep
+*.sqlite
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Office lock files (~$foo.pptx while a document is open)
+~$*
+# pip temp dirs left behind when an install is interrupted
+pip-*
+
+# project-local temp dir: pip's build tracker must not use the DSH session TEMP
+tmp/
+
+# ---------------------------------------------------------------- private
+# Local agent context: working state, rules, traps. Not published.
+AGENTS.md
+
+# Course brief (Agrani Labs). Contains the mentors' email addresses.
+agrani-cutile-attention.pdf
+
+# Extracted text of the same brief.
+docs/brief-text.txt
+
+# Local virtual environments that are not the project one (torch is optional and 6 GB)
+.venv-torch/
+.venv-win/
+
+# Run logs from the test and benchmark scripts
+logs/
+
+# Report build intermediates
+report/report.log
+report/report.aux
+report/report.out

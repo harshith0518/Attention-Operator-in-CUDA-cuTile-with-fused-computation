@@ -1,0 +1,24 @@
+# Keep shell scripts and sources LF on every platform.
+#
+# Windows git warned that it would convert these to CRLF on checkout. That would break
+# scripts/setup_linux.sh and every other bash script for anyone who clones on Linux, which is the
+# platform this project targets. Force LF for text, and mark binary formats so they are untouched.
+* text=auto
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.cu    text eol=lf
+*.md    text eol=lf
+*.tex   text eol=lf
+*.txt   text eol=lf
+*.csv   text eol=lf
+*.json  text eol=lf
+Makefile text eol=lf
+
+*.pptx  binary
+*.potx  binary
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.zip   binary
+*.cubin binary

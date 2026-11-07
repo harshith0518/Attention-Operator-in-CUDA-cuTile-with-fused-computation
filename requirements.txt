@@ -1,0 +1,24 @@
+# Install with:  bash scripts/setup_linux.sh
+#
+# Audited: every line is imported by the shipped code. Pillow is imported lazily inside the figure
+# functions, so the tests and benchmarks run without it. PyTorch is deliberately absent.
+
+# --- required: the tile-level half -------------------------------------------------------------
+# [tileiras] vendors the TileIR compiler into the venv. 1.2 is the first release with Ampere support.
+cuda-tile[tileiras]>=1.2
+
+# tileiras does not ship nvrtc. CuPy needs it, and so does the NVRTC path that compiles
+# kernels/cuda-fused-attn/flash_v2.cu at run time.
+cuda-toolkit[nvrtc]
+
+# --- required: host-side arrays ----------------------------------------------------------------
+numpy>=1.26
+cupy-cuda12x
+
+# --- optional: only `make figs` needs this -----------------------------------------------------
+pillow>=10
+
+# --- optional: only make slides needs this ---------------------------------------------------
+# Builds the three-slide demo deck. The deck and its PDF are already in slides/, so a reader who only
+# wants the numbers does not need this.
+python-pptx>=0.6
