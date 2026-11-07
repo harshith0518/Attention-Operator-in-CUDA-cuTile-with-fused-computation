@@ -1,0 +1,9 @@
+==PROF== Connected to process 771 (/usr/bin/python3.12)
+launched cutile N=2048 causal=0 out=(1, 8, 2048, 64)
+==PROF== Disconnected from process 771
+"ID","Process ID","Process Name","Host Name","Kernel Name","Context","Stream","Block Size","Grid Size","Device","CC","Section Name","Metric Name","Metric Unit","Metric Value"
+"0","771","python3.12","127.0.0.1","_attn_fwd_Kt1_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_Si32_Sf32_B0_I64_I64_I64","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_read.sum","byte","57235200"
+"0","771","python3.12","127.0.0.1","_attn_fwd_Kt1_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_Si32_Sf32_B0_I64_I64_I64","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_write.sum","byte","321928576"
+"0","771","python3.12","127.0.0.1","_attn_fwd_Kt1_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_Si32_Sf32_B0_I64_I64_I64","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","gpu__time_duration.sum","ns","3065952"
+"0","771","python3.12","127.0.0.1","_attn_fwd_Kt1_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_Si32_Sf32_B0_I64_I64_I64","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed","%","13.82"
+"0","771","python3.12","127.0.0.1","_attn_fwd_Kt1_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_A3f16_3v8l0_4t1_6i16_p16_Si32_Sf32_B0_I64_I64_I64","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__warps_active.avg.pct_of_peak_sustained_active","%","16.48"

@@ -1,0 +1,9 @@
+==PROF== Connected to process 828 (/usr/bin/python3.12)
+launched cuda N=2048 causal=1 out=(1, 8, 2048, 64)
+==PROF== Disconnected from process 828
+"ID","Process ID","Process Name","Host Name","Kernel Name","Context","Stream","Block Size","Grid Size","Device","CC","Section Name","Metric Name","Metric Unit","Metric Value"
+"0","828","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_read.sum","byte","6363520"
+"0","828","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","dram__bytes_write.sum","byte","2284928"
+"0","828","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","gpu__time_duration.sum","ns","1801952"
+"0","828","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed","%","12.12"
+"0","828","python3.12","127.0.0.1","attn_fwd","1","7","(128, 1, 1)","(32, 8, 1)","0","8.6","Command line profiler metrics","sm__warps_active.avg.pct_of_peak_sustained_active","%","8.33"
