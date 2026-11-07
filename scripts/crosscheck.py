@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Cross-check that v1, v2 and cuTile produce the same answer, since v2 is now the shipped kernel."""
+"""Cross-check the shipped kernels against each other and against the materialised baseline.
+
+Two different implementations agreeing is the strongest correctness evidence available, because a
+shared bug across a register-resident mma.sync kernel and a compiler-generated tile kernel is
+implausible. The baseline is compared too, but it is coarser: it rounds through fp32 matmuls that CuPy
+runs separately, so a larger difference is expected there.
+
+Run:  .venv/bin/python scripts/crosscheck.py
+"""
 
 import os
 import sys
@@ -16,21 +24,27 @@ import bench.bench as B                                              # noqa: E40
 
 
 def main() -> int:
-    models = {m.name: m for m in B.make_models(["cuda", "cuda2", "cutile"])}
-    print("  " + ", ".join(models))
+    models = {m.name: m for m in B.make_models(["cuda", "cutile", "unfused"])}
+    print("  models: " + ", ".join(models))
+
     worst = 0.0
+    print(f"\n  {'N':>6}{'causal':>7}{'|CUDA-cuTile|':>16}{'|CUDA-unfused|':>16}")
     for n in (256, 1024, 2048):
         for causal in (0, 1):
             outs = {}
-            for name, m in models.items():
+            for name, model in models.items():
                 q, k, v = B.inputs(n)
-                outs[name] = cp.asnumpy(m(q, k, v, bool(causal))).astype(np.float64)
-            d = float(np.max(np.abs(outs["cuda"] - outs["cuda2"])))
-            c = float(np.max(np.abs(outs["cuda2"] - outs["cutile"])))
-            worst = max(worst, d, c)
-            print(f"  N={n:5d} causal={causal}  |v1-v2|={d:.2e}  |v2-cuTile|={c:.2e}")
-    print(f"\n  worst disagreement: {worst:.2e}")
-    return 0
+                outs[name] = cp.asnumpy(model(q, k, v, bool(causal))).astype(np.float64)
+            d = float(np.max(np.abs(outs["cuda"] - outs["cutile"])))
+            b = float(np.max(np.abs(outs["cuda"] - outs["unfused"])))
+            worst = max(worst, d)
+            print(f"  {n:>6}{causal:>7}{d:>16.2e}{b:>16.2e}")
+
+    # the kernels must agree tightly; this is the claim the report makes
+    ok = worst <= 5e-4
+    print(f"\n  worst CUDA-versus-cuTile disagreement: {worst:.2e}  "
+          f"({'within 5e-04, as the report states' if ok else 'ABOVE the 5e-04 the report claims'})")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

@@ -53,3 +53,7 @@ logs/
 report/report.log
 report/report.aux
 report/report.out
+
+# Deck generator. The deck is the deliverable and is kept in slides/; the script that produced it is
+# local scaffolding, so it stays out of the repository.
+slides/build_fused_attention_demo.py

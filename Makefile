@@ -40,6 +40,9 @@ help:
 	@echo "  make bench      timing sweep -> results/results.csv"
 	@echo "  make figs       regenerate figs/ from the CSV"
 	@echo "  make sass       disassemble the CUDA kernel (registers, spills, instruction mix)"
+	@echo "  make peak       measure the fp32 and fp16 tensor-core ceiling on this GPU"
+	@echo "  make profile    ncu counters for one configuration -> profiles/"
+	@echo "  make report     build report/report.pdf"
 	@echo "  make clean      remove caches and figures; results/ is kept"
 	@echo
 	@echo "  python: $(PY)"
@@ -112,9 +115,6 @@ profile:
 report:
 	@bash $(REPO)/scripts/build_report.sh
 
-slides:
-	@$(PY) $(REPO)/slides/build_fused_attention_demo.py
-
 clean:
 	rm -rf $(REPO)/tmp/cupy $(REPO)/tmp/cuda_tile $(REPO)/tmp/*.cubin $(REPO)/tmp/*.sass
 	rm -f $(REPO)/figs/*.png
@@ -124,4 +124,4 @@ py-missing:
 	@echo "no venv at $(PY): run 'make setup' first" >&2
 	@exit 1
 
-.PHONY: help setup check-gpu test bench figs sass peak profile report slides clean py-missing
+.PHONY: help setup check-gpu test bench figs sass peak profile report clean py-missing

@@ -2,12 +2,13 @@
 
 One kernel per launch: QK^T, online softmax and PV stay on chip. The N x N score matrix never
 reaches DRAM. This is the tile-level half of the comparison; the thread-level half is
-kernels/cuda-fused-attn/flash.cu.
+kernels/cuda-fused-attn/flash_v2.cu.
 
-Numerics follow PLAN.md section 5: fp32 state, one folded scale, alpha applied once, p masked
-twice (once on the score, once on the weight), finite sentinel, tail predicate from indices.
+Numerics: fp32 state, one folded base-2 scale, alpha applied once before the accumulate, p masked
+twice (once on the score, once on the weight), a finite sentinel instead of -inf, and the tail
+predicate built from indices.
 
-Run:  .\\.venv\\Scripts\\python.exe .\\cutile\\attn\\flash.py
+Run:  .venv/bin/python kernels/cutile-fused-attn/flash.py
 """
 
 import os

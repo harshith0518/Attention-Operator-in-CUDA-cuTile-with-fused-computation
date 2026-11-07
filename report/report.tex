@@ -149,12 +149,12 @@ Async copy & \texttt{cp.async}, double buffered & compiler's choice (\texttt{LDG
 Registers & 140 & 255 \\
 Shared memory & 46080 B & 48 KB \\
 Blocks per SM & \textbf{2} & 2 \\
-Source & 191 code lines & 118 code lines \\
+Source & 191 code lines & 119 code lines \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The compiler version needs 118 lines and contains no thread index, no stride, no barrier and no staging
+The compiler version needs 119 lines and contains no thread index, no stride, no barrier and no staging
 decision. The hand-written version needs those decisions, which is the trade the brief asks us to
 measure.
 
@@ -321,7 +321,7 @@ the first measurements showed.
 \toprule
 axis & evidence \\
 \midrule
-Development velocity & 118 code lines of cuTile against 191 for the CUDA kernel. The CUDA kernel needed
+Development velocity & 119 code lines of cuTile against 191 for the CUDA kernel. The CUDA kernel needed
 five measured fixes; cuTile needed one loop bound. cuTile's advantage is not typing speed, it is the bug
 classes that cannot occur. \\
 Control and tunability & I must choose the fragment mapping, the shared stride and padding, the barrier
@@ -342,11 +342,11 @@ assembly to my lines, but not the compiler's. \\
 
 \section{Conclusion and recommendation}\label{sec:rec}
 
-\textbf{Start in cuTile, and expect to finish in CUDA.} The tile version was correct, and it cost 118
+\textbf{Start in cuTile, and expect to finish in CUDA.} The tile version was correct, and it cost 119
 lines with no thread index, no stride and no barrier. It is the right way to find out whether the
 operator matters at all.
 
-\textbf{Decide with counters, not with line counts.} The same 118 lines produced one kernel that stays
+\textbf{Decide with counters, not with line counts.} The same 119 lines produced one kernel that stays
 on chip and one that writes \SI{322}{MB} to DRAM. The causal build, which does not leak, still reached
 only 31\% of the tensor pipe against SDPA's 45\%.
 

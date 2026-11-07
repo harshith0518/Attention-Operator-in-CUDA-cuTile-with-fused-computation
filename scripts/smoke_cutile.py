@@ -10,9 +10,10 @@ here is a 10-line capability probe: ct.mma is the operation the attention kernel
 QK^T and PV products are built on, so if `ct.mma` does not lower correctly on this GPU
 there is no project. That is why it is the gate.
 
-Exit code 0 only if all three pass. This is the gate in PLAN.md section 3.2.
+Exit code 0 only if all three pass. Run this before anything else: every later target assumes it
+passed.
 
-Run:  .venv\\Scripts\\python.exe scripts\\smoke_cutile.py
+Run:  .venv/bin/python scripts/smoke_cutile.py
 """
 
 import sys
@@ -185,9 +186,7 @@ def main() -> int:
         return 1
 
     hr("ALL THREE CHECKS PASSED")
-    print("  cuTile is alive on this GPU. Save the versions with")
-    print("      .\\.venv\\Scripts\\python.exe -m pip freeze > docs\\requirements.lock.txt")
-    print("  then tick the gate in AGENTS.md section 3 and start PLAN.md day 2.")
+    print("  cuTile is alive on this GPU. Next: 'make test', then 'make bench'.")
     return 0
 
 

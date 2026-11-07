@@ -17,7 +17,7 @@ reference.
 | `profiles/*.csv` | raw `ncu` counters: DRAM bytes, occupancy, tensor-pipe cycles |
 | `figs/*.png` | the two charts |
 | `report/report.pdf` | the four-page written comparison, with `report.tex` beside it |
-| `slides/` | the three-slide demo deck, its PDF, and the script that builds it |
+| `slides/fused_attention_demo.pptx` | the three-slide demo deck, with its PDF beside it |
 | `requirements.txt` | the Python packages |
 | `Makefile` | every command below, so you do not have to retype them |
 
@@ -87,7 +87,6 @@ make sass      # registers, spills, and the SASS instruction mix
 make peak      # the fp32 and fp16 ceiling on this GPU
 make profile   # ncu counters into profiles/ (needs the counter permission)
 make report    # rebuilds report/report.pdf
-make slides    # rebuilds the three-slide deck
 make           # lists every target
 ```
 
